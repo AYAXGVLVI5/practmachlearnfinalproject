@@ -1,0 +1,75 @@
+---
+title: "finalproject"
+author: "Luis Galvis"
+date: "Sunday, September 21, 2014"
+output: html_document
+---
+
+# Final Report 
+## Executive summary
+
+This report shows the analysis on the data from Accelerometers on the belt, forearm, arm, and dumbell of 6 participants. The goal of the analysis is to predict the manner in which they did the exercise.  and us this in 20 new test cases.
+
+
+```{r}
+library(caret)
+
+
+
+mytrainData <- read.csv ("pml-training.csv")
+mytestData <-  read.csv ("pml-testing.csv")
+```
+
+## First step - Choosing main Features
+The first step is to choose the features to build the model as there are 160 variables many of them with missing information. For that, we'll built the correlation matrix of the numerical variables and take the ones more than 0.70. 
+
+It's important to recall that we are interested in predict the feature classe, which gives the how persons made the excersice, so information like the name of who did the exercise is irrelevant. 
+
+```{r}
+cor1 <- mytrainData[sapply(mytrainData, function(x) sum(is.na(x)) == 0)]
+# 93 features remaining after taking out all the features that have missing information
+
+cor1 <- cor1[sapply(cor1, is.numeric)];
+# 56 features remaining after taking out all the non numeric colums
+
+corrbest <- cor(cor1, use = "pairwise.complete.obs");
+corbestind<-findCorrelation(corrbest, 0.68);
+# 25 features after choosing the best, above 68
+
+bestfeatnames <- names(cor1)[corbestind]; 
+besttrainData <- mytrainData[,bestfeatnames]
+# besttrainData is the data frame with the best 25 features (above 0.68)
+
+
+# Now we add the classe variable back
+besttrainData$classe <- mytrainData$classe
+besttrain2 <- besttrainData[complete.cases(besttrainData),]
+# Comparing besttrain2 and besttrainData they have the same number of rows, meaning matrix is complete, which is good.
+```
+
+# Creating training and test for the model 
+
+```{r, echo=FALSE}
+inTrain<-createDataPartition (y=besttrainData$classe,p=0.7,list=FALSE)
+training<- besttrainData[inTrain,]
+testing <- besttrainData[-inTrain,]
+```
+
+```{r, echo=FALSE}
+
+modfit <- train (classe~., data=training, method="rf",prox=TRUE )
+
+model <- randomForest(classe ~ .,   data=training, ntree = 50)
+predictions <- predict(model, testing)
+confusionMatrix(predictions, testing$classe)
+
+
+model <- randomForest(classe ~ .,   data=training, ntree = 50)
+predictions <- predict(model, validation)
+confusionMatrix(predictions, validation$classe)
+
+
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
